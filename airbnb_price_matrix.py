@@ -9,12 +9,18 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_price(listing_id, check_in, check_out, adults):
+    print(f"Fetching price for {listing_id} from {check_in} to {check_out} for {adults} adults")
     url = f"https://www.airbnb.com/rooms/{listing_id}"
     params = f"?adults={adults}&check_in={check_in}&check_out={check_out}"
     full_url = url + params
 
     options = Options()
     options.headless = True
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--remote-debugging-port=9222')
+
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(full_url)
     time.sleep(5)  # Allow time for the page to load
@@ -23,6 +29,7 @@ def get_price(listing_id, check_in, check_out, adults):
         price_element = driver.find_element(By.CSS_SELECTOR, 'div[data-testid="price"]').text
         price_text = price_element.replace('$', '').replace(',', '')
         price = float(price_text)
+        print(f"Found price: {price}")
     except Exception as e:
         print(f"Error fetching price for {check_in} to {check_out}: {e}")
         price = None
@@ -31,6 +38,7 @@ def get_price(listing_id, check_in, check_out, adults):
     return price
 
 def create_price_matrix(listing_id, start_date, end_date, adults):
+    print(f"Creating price matrix for listing {listing_id} from {start_date} to {end_date} for {adults} adults")
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
 
@@ -62,6 +70,7 @@ def main():
 
     df = create_price_matrix(listing_id, start_date, end_date, adults)
     df.to_csv('price_matrix.csv')
+    print("Price matrix saved to price_matrix.csv")
 
 if __name__ == "__main__":
     main()
