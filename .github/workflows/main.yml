@@ -12,13 +12,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
 
     - name: Install dependencies
-      run: pip install requests beautifulsoup4 pandas
+      run: |
+        pip install selenium pandas webdriver-manager
+
+    - name: Install ChromeDriver
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chromium-chromedriver
+        sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver
 
     - name: Run script
       run: python airbnb_price_matrix.py 960848800873408366 2024-06-11 2024-06-18 3
