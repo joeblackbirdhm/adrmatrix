@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime, timedelta
 import sys
+import re
 
 def get_price(listing_id, check_in, check_out, adults):
     url = f"https://www.airbnb.com/rooms/{listing_id}"
@@ -11,16 +12,29 @@ def get_price(listing_id, check_in, check_out, adults):
         'check_in': check_in,
         'check_out': check_out,
     }
-    response = requests.get(url, params=params)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+    
+    response = requests.get(url, params=params, headers=headers)
+    
+    if response.status_code != 200:
+        print(f"Failed to retrieve data for {check_in} to {check_out}")
+        return None
+    
     soup = BeautifulSoup(response.content, 'html.parser')
 
     # Extract price (this might need adjustments depending on Airbnb's page structure)
-    price_element = soup.find('div', {'data-testid': 'price'})
-    if price_element:
-        price_text = price_element.get_text()
-        price = float(price_text.replace('$', '').replace(',', ''))
-        return price
-    return None
+    script_tags = soup.find_all('script')
+    price = None
+
+    for script in script_tags:
+        if 'bootstrapData' in script.text:
+            match = re.search(r'"rate":(\d+)', script.text)
+            if match:
+                price = int(match.group(1)) / 100  # Convert cents to dollars
+                break
+
+    return price
 
 def create_price_matrix(listing_id, start_date, end_date, adults):
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
