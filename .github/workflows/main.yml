@@ -22,7 +22,7 @@ jobs:
       run: |
         pip install selenium pandas webdriver-manager
 
-    - name: Install ChromeDriver
+    - name: Install Chrome and ChromeDriver
       run: |
         sudo apt-get update
         sudo apt-get install -y chromium-browser chromium-chromedriver
