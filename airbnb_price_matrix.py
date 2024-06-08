@@ -1,43 +1,30 @@
-import pandas as pd
-from datetime import datetime, timedelta
 import sys
 import time
+import pandas as pd
+from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_price(listing_id, check_in, check_out, adults):
-    print(f"Fetching price for {listing_id} from {check_in} to {check_out} for {adults} adults")
-    url = f"https://www.airbnb.com/rooms/{listing_id}"
-    params = f"?adults={adults}&check_in={check_in}&check_out={check_out}"
-    full_url = url + params
-
+    url = f'https://www.airbnb.com/s/{listing_id}/homes?checkin={check_in}&checkout={check_out}&adults={adults}'
     options = Options()
-    options.headless = True
+    options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--remote-debugging-port=9222')
-
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    driver.get(full_url)
-    
+
     try:
-        # Wait until the price element is present
-        wait = WebDriverWait(driver, 20)
-        price_element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-testid="price"]')))
-        
-        # Debug information
-        print(f"Page source length: {len(driver.page_source)}")
-        print(f"Found price element: {price_element.text}")
+        driver.get(url)
+        time.sleep(5)  # Wait for the page to load completely
+
+        price_element = driver.find_element("xpath", '//*[@data-testid="price-summary__total"]')
 
         price_text = price_element.text.replace('$', '').replace(',', '')
         price = float(price_text)
-        print(f"Found price: {price}")
+        
+        print(f"Fetched price: ${price} for {check_in} to {check_out}")
     except Exception as e:
         print(f"Error fetching price for {check_in} to {check_out}: {e}")
         price = None
@@ -47,25 +34,15 @@ def get_price(listing_id, check_in, check_out, adults):
     return price
 
 def create_price_matrix(listing_id, start_date, end_date, adults):
-    print(f"Creating price matrix for listing {listing_id} from {start_date} to {end_date} for {adults} adults")
-    start_date = datetime.strptime(start_date, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date, '%Y-%m-%d')
-
-    dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-    matrix = []
+    dates = pd.date_range(start_date, end_date - timedelta(days=1))
+    price_matrix = pd.DataFrame(index=dates, columns=dates)
 
     for check_in in dates:
-        row = []
-        for check_out in dates:
-            if check_in >= check_out:
-                row.append(None)
-            else:
-                price = get_price(listing_id, check_in.strftime('%Y-%m-%d'), check_out.strftime('%Y-%m-%d'), adults)
-                row.append(price)
-        matrix.append(row)
+        for check_out in dates[dates > check_in]:
+            price = get_price(listing_id, check_in.strftime('%Y-%m-%d'), check_out.strftime('%Y-%m-%d'), adults)
+            price_matrix.at[check_in, check_out] = price
 
-    df = pd.DataFrame(matrix, index=[d.strftime('%Y-%m-%d') for d in dates], columns=[d.strftime('%Y-%m-%d') for d in dates])
-    return df
+    return price_matrix
 
 def main():
     if len(sys.argv) != 5:
@@ -73,13 +50,17 @@ def main():
         sys.exit(1)
 
     listing_id = sys.argv[1]
-    start_date = sys.argv[2]
-    end_date = sys.argv[3]
+    start_date = datetime.strptime(sys.argv[2], '%Y-%m-%d')
+    end_date = datetime.strptime(sys.argv[3], '%Y-%m-%d')
     adults = int(sys.argv[4])
 
-    df = create_price_matrix(listing_id, start_date, end_date, adults)
-    df.to_csv('price_matrix.csv')
-    print("Price matrix saved to price_matrix.csv")
+    print(f"Creating price matrix for listing {listing_id} from {start_date.date()} to {end_date.date()} for {adults} adults")
 
-if __name__ == "__main__":
+    price_matrix = create_price_matrix(listing_id, start_date, end_date, adults)
+
+    filename = f'price_matrix_{listing_id}_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}_{adults}adults.csv'
+    price_matrix.to_csv(filename)
+    print(f"Saved price matrix to {filename}")
+
+if __name__ == '__main__':
     main()
