@@ -22,18 +22,19 @@ jobs:
       run: |
         pip install selenium pandas webdriver-manager
 
-    - name: Install Chrome and ChromeDriver
+    - name: Install Chrome and ChromeDriver dependencies
       run: |
         sudo apt-get update
+        sudo apt-get install -y unzip xvfb libxi6 libgconf-2-4
         sudo apt-get install -y google-chrome-stable
-        LATEST_CHROMEDRIVER=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)
-        wget -N https://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER/chromedriver_linux64.zip -P ~/
+        wget -N https://chromedriver.storage.googleapis.com/$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)/chromedriver_linux64.zip -P ~/
         unzip ~/chromedriver_linux64.zip -d ~/
         sudo mv -f ~/chromedriver /usr/local/bin/chromedriver
         sudo chmod 0755 /usr/local/bin/chromedriver
 
     - name: Run script
-      run: python airbnb_price_matrix.py 960848800873408366 2024-06-11 2024-06-18 3
+      run: |
+        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' python airbnb_price_matrix.py 960848800873408366 2024-06-11 2024-06-18 3
 
     - name: Upload price matrix
       uses: actions/upload-artifact@v2
