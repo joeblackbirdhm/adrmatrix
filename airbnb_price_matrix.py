@@ -6,6 +6,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_price(listing_id, check_in, check_out, adults):
@@ -23,18 +25,25 @@ def get_price(listing_id, check_in, check_out, adults):
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(full_url)
-    time.sleep(5)  # Allow time for the page to load
-
+    
     try:
-        price_element = driver.find_element(By.CSS_SELECTOR, 'div[data-testid="price"]').text
-        price_text = price_element.replace('$', '').replace(',', '')
+        # Wait until the price element is present
+        wait = WebDriverWait(driver, 20)
+        price_element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-testid="price"]')))
+        
+        # Debug information
+        print(f"Page source length: {len(driver.page_source)}")
+        print(f"Found price element: {price_element.text}")
+
+        price_text = price_element.text.replace('$', '').replace(',', '')
         price = float(price_text)
         print(f"Found price: {price}")
     except Exception as e:
         print(f"Error fetching price for {check_in} to {check_out}: {e}")
         price = None
+    finally:
+        driver.quit()
 
-    driver.quit()
     return price
 
 def create_price_matrix(listing_id, start_date, end_date, adults):
