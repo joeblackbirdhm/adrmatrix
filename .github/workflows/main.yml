@@ -25,9 +25,14 @@ jobs:
     - name: Install Chrome and ChromeDriver
       run: |
         sudo apt-get update
-        sudo apt-get install -y chromium-browser chromium-chromedriver
-        sudo rm -f /usr/bin/chromedriver
-        sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver
+        sudo apt-get install -y wget unzip
+        wget -q -O google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo apt-get install -y ./google-chrome.deb
+        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+        wget -q -O chromedriver.zip https://chromedriver.storage.googleapis.com/$CHROME_VERSION/chromedriver_linux64.zip
+        unzip chromedriver.zip
+        sudo mv chromedriver /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
 
     - name: Run script
       run: python airbnb_price_matrix.py 960848800873408366 2024-06-11 2024-06-18 3
