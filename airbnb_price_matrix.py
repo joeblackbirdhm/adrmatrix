@@ -19,7 +19,8 @@ def get_price(listing_id, check_in, check_out, adults):
         driver.get(url)
         time.sleep(5)  # Wait for the page to load completely
 
-        price_element = driver.find_element("xpath", '//*[@data-testid="price-summary__total"]')
+        # Use the copied XPath or CSS Selector here
+        price_element = driver.find_element("xpath", '//*[@class="//*[@id="site-content"]/div/div[1]/div[3]/div/div[2]/div/div/div[1]/div/div/div/div/div/div/div/div[3]/div/section/div[1]/div[1]/span[2]"]')
 
         price_text = price_element.text.replace('$', '').replace(',', '')
         price = float(price_text)
